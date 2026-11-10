@@ -873,7 +873,7 @@ class AlphabetHints {
         const marker = hintMarkers[i];
         marker.hintString = hintStrings[i];
         if (marker.isLocalMarker()) {
-          marker.element.innerHTML = spanWrap(marker.hintString.toUpperCase());
+          marker.element.replaceChildren(...spanWrap(marker.hintString.toUpperCase()));
         }
       }
     }
@@ -957,7 +957,7 @@ class FilterHints {
       linkText = linkText.slice(0, 33) + "...";
     }
     const caption = marker.hintString + (marker.localHint.showLinkText ? ": " + linkText : "");
-    marker.element.innerHTML = spanWrap(caption);
+    marker.element.replaceChildren(...spanWrap(caption));
   }
 
   fillInMarkers(hintMarkers) {
@@ -1111,13 +1111,17 @@ class FilterHints {
 
 //
 // Make each hint character a span, so that we can highlight the typed characters as you type them.
+// The caption can contain text from the page, so it's set via textContent, never as HTML.
 //
 const spanWrap = (hintString) => {
-  const innerHTML = [];
+  const spans = [];
   for (const char of hintString) {
-    innerHTML.push("<span class='vimium-reset'>" + char + "</span>");
+    const span = DomUtils.createElement("span");
+    span.className = "vimium-reset";
+    span.textContent = char;
+    spans.push(span);
   }
-  return innerHTML.join("");
+  return spans;
 };
 
 const LocalHints = {

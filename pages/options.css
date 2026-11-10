@@ -158,12 +158,6 @@ input[name="newTabCustomUrl"] {
   grid-column-start: 2;
 }
 
-#openVomnibarContainer {
-  display: flex;
-  align-items: center;
-  grid-column-start: 2;
-}
-
 input[name="newTabCustomUrl"] {
   width: 400px;
 }
@@ -191,8 +185,7 @@ input[name="scrollStepSize"] {
 }
 
 textarea[name="userDefinedLinkHintCss"],
-textarea[name="keyMappings"],
-textarea[name="searchEngines"] {
+textarea[name="keyMappings"] {
   width: 100%;
   min-height: 140px;
   white-space: pre;
@@ -200,10 +193,6 @@ textarea[name="searchEngines"] {
 
 input[name="previousPatterns"],
 input[name="nextPatterns"] {
-  width: 100%;
-}
-
-input#searchUrl {
   width: 100%;
 }
 

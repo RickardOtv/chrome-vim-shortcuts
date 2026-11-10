@@ -25,27 +25,25 @@
   ],
   "permissions": [
     "tabs",
-    "bookmarks",
-    "history",
     "storage",
     "sessions",
-    // Notifications are used to show a message when Vimium's major version has been upgraded.
-    "notifications",
     // We're using the scripting permission to 1) inject our content scripts and CSS into existing
     // tabs when Vimium is first installed, and 2) inject the user's link hints CSS when a page
     // loads. This permission was required when moving to manifest V3.
     "scripting",
-    "favicon", // The favicon permission is not yet supported by Firefox.
-    "webNavigation",
-    "search"
+    "webNavigation"
   ],
+  // Only the extension's own files may run or be loaded. connect-src 'self' means the extension's
+  // pages cannot make network requests to anywhere else.
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; connect-src 'self'"
+  },
   "content_scripts": [
     {
       "matches": [
         "<all_urls>"
       ],
       "js": [
-        "lib/types.js",
         "lib/utils.js",
         "lib/keyboard_utils.js",
         "lib/dom_utils.js",
@@ -56,7 +54,6 @@
         "content_scripts/mode.js",
         "content_scripts/ui_component.js",
         "content_scripts/link_hints.js",
-        "content_scripts/vomnibar.js",
         "content_scripts/scroller.js",
         "content_scripts/marks.js",
         "content_scripts/mode_insert.js",
@@ -106,17 +103,14 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "pages/vomnibar_page.html",
         "content_scripts/vimium.css",
         "pages/hud_page.html",
         "pages/help_dialog_page.html",
-        "pages/doc_search_completion.html",
-        "pages/command_listing.html",
-        "resources/tlds.txt",
         // This allows one to script the reloading of Vimium.
         // This should only be enabled in development.
         // "pages/reload.html",
-        "_favicon/*"
+        "pages/command_listing.html",
+        "resources/tlds.txt"
       ],
       "matches": [
         "<all_urls>"

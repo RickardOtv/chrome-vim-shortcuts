@@ -1,13 +1,11 @@
 import "./all_content_scripts.js";
 import { ExclusionRulesEditor } from "./exclusion_rules_editor.js";
 import { Commands, KeyMappingsParser } from "../background_scripts/commands.js";
-import * as userSearchEngines from "../background_scripts/user_search_engines.js";
 
 const options = {
   filterLinkHints: "boolean",
   grabBackFocus: "boolean",
   hideHud: "boolean",
-  hideUpdateNotifications: "boolean",
   ignoreKeyboardLayout: "boolean",
   keyMappings: "string",
   linkHintCharacters: "string",
@@ -15,11 +13,9 @@ const options = {
   newTabCustomUrl: "string",
   newTabDestination: "option",
   nextPatterns: "string",
-  openVomnibarOnNewTabPage: "boolean",
   previousPatterns: "string",
   regexFindMode: "boolean",
   scrollStepSize: "number",
-  searchEngines: "string",
   settingsVersion: "string", // This is a hidden field.
   smoothScroll: "boolean",
   userDefinedLinkHintCss: "string",
@@ -189,13 +185,6 @@ function getValidationErrors() {
     results["keyMappings"] = parsed.validationErrors.join("\n");
   }
 
-  // searchEngines field.
-  text = getOptionEl("searchEngines").value.trim();
-  parsed = userSearchEngines.parseConfig(text);
-  if (parsed.validationErrors.length > 0) {
-    results["searchEngines"] = parsed.validationErrors.join("\n");
-  }
-
   // linkHintCharacters field.
   text = getOptionEl("linkHintCharacters").value.trim();
   if (text != removeDuplicateChars(text)) {
@@ -286,10 +275,6 @@ function showElement(el, visible) {
 // newTabDestination.
 function maintainNewTabUrlView() {
   const destination = document.querySelector("[name=newTabDestination]:checked").value;
-  showElement(
-    document.querySelector("#openVomnibarContainer"),
-    destination == Settings.newTabDestinations.vimiumNewTabPage,
-  );
   showElement(
     document.querySelector("[name=newTabCustomUrl]"),
     destination == Settings.newTabDestinations.customUrl,

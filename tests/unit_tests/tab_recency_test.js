@@ -23,12 +23,6 @@ context("TabRecency", () => {
       assert.equal(expected, tabRecency.getTabsByRecency());
     });
 
-    should("score tabs by recency; current tab should be last", () => {
-      const score = (id) => tabRecency.recencyScore(id);
-      assert.equal(0, score(2));
-      assert.isTrue(score(2) < score(1));
-      assert.isTrue(score(1) < score(3));
-    });
   });
 
   should("navigate actions are queued until state from storage is loaded", async () => {

@@ -1,11 +1,10 @@
 // TabRecency associates an integer with each tab id representing how recently it has been accessed.
-// The order of tabs as tracked by TabRecency is used to provide a recency-based ordering in the
-// tabs vomnibar.
+// It is used by the visitPreviousTab command.
 //
 // The values are persisted to chrome.storage.session so that they're not lost when the extension's
 // background page is unloaded.
 //
-// Callers must await TabRecency.init before calling recencyScore or getTabsByRecency.
+// Callers must await TabRecency.init before calling getTabsByRecency.
 //
 // In theory, the browser's tab.lastAccessed timestamp field should allow us to sort tabs by
 // recency, but in practice it does not work across several edge cases. See the comments on #4368.
@@ -116,15 +115,6 @@ class TabRecency {
   deregister(tabId) {
     delete this.tabIdToCounter[tabId];
     this.saveToStorage();
-  }
-
-  // Recently-visited tabs get a higher score (except the current tab, which gets a low score).
-  recencyScore(tabId) {
-    if (!this.loaded) throw new Error("TabRecency hasn't yet been loaded.");
-    const tabCounter = this.tabIdToCounter[tabId];
-    const isCurrentTab = tabCounter == this.counter;
-    if (isCurrentTab) return 0;
-    return (tabCounter ?? 1) / this.counter; // tabCounter may be null.
   }
 
   // Returns a list of tab Ids sorted by recency, most recent tab first.

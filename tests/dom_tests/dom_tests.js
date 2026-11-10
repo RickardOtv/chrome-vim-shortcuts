@@ -2,7 +2,7 @@ let commandCount = null;
 let commandName = null;
 
 // Some tests have side effects on the handler stack and the active mode, so these are reset on
-// setup. Also, some tests affect the focus (e.g. Vomnibar tests), so we make sure the window has
+// setup. Also, some tests affect the focus (e.g. find mode tests), so we make sure the window has
 // the focus.
 const initializeModeState = () => {
   globalThis.focus();

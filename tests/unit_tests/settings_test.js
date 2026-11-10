@@ -2,93 +2,37 @@ import "./test_helper.js";
 import "../../lib/settings.js";
 
 context("settings", () => {
-  context("v2.0 migration", () => {
-    setup(async () => {
-      // Prior to Vimium 2.0.0, the settings values were encoded as JSON strings.
-      await chrome.storage.sync.set({ scrollStepSize: JSON.stringify(123) });
-    });
-
-    teardown(async () => {
-      await Settings.clear();
-    });
-
-    should("Run v2.0.0 migration when loading settings", async () => {
-      let storage = await chrome.storage.sync.get(null);
-      assert.equal("123", storage.scrollStepSize);
-      // The JSON value should've been migrated to an int when loading settings.
-      await Settings.load();
-      const settings = Settings.getSettings();
-      assert.equal(123, settings["scrollStepSize"]);
-      // When writing settings, the JSON value should be persisted back to storage.
-      await Settings.set(settings);
-      storage = await chrome.storage.sync.get(null);
-      assert.equal(123, storage.scrollStepSize);
-    });
+  setup(async () => {
+    await Settings.load();
   });
 
-  context("v2.4 migration", () => {
-    setup(async () => {
-      await chrome.storage.sync.set({
-        settingsVersion: "2.3",
-      });
-    });
-
-    teardown(async () => {
-      await Settings.clear();
-    });
-
-    should("Handle null newTabUrl", async () => {
-      // Users who never changed newTabUrl from its old default ("about:newtab") won't have it
-      // stored, because Settings.pruneOutDefaultValues removes keys equal to the default. The
-      // migration should still set browserNewTabPage as the destination.
-      await Settings.load();
-      const settings = Settings.getSettings();
-      assert.equal(Settings.newTabDestinations.browserNewTabPage, settings.newTabDestination);
-    });
-
-    should("Remove deprecated option", async () => {
-      await chrome.storage.sync.set({ newTabUrl: "pages/blank.html" });
-      await Settings.load();
-      const settings = Settings.getSettings();
-      assert.isFalse(Object.hasOwn(settings, "newTabUrl"));
-    });
-
-    should("Handle pages/blank.html new tab URL", async () => {
-      await chrome.storage.sync.set({ newTabUrl: "pages/blank.html" });
-      await Settings.load();
-      const settings = Settings.getSettings();
-      assert.equal(Settings.newTabDestinations.vimiumNewTabPage, settings.newTabDestination);
-    });
-
-    should("Handle https://example.com new tab URL", async () => {
-      await chrome.storage.sync.set({ newTabUrl: "https://example.com" });
-      await Settings.load();
-      const settings = Settings.getSettings();
-      assert.equal(Settings.newTabDestinations.customUrl, settings.newTabDestination);
-      assert.equal("https://example.com", settings.newTabCustomUrl);
-    });
+  teardown(async () => {
+    await Settings.clear();
+    await chrome.storage.sync.clear();
   });
 
-  context("v2.4.1 migration", () => {
-    setup(async () => {
-      await chrome.storage.sync.set({ settingsVersion: "2.4.0" });
-    });
+  should("save settings to storage.local, not storage.sync", async () => {
+    await Settings.set("scrollStepSize", 123);
+    assert.equal(123, (await chrome.storage.local.get("scrollStepSize")).scrollStepSize);
+    assert.equal({}, await chrome.storage.sync.get(null));
+  });
 
-    teardown(async () => {
-      await Settings.clear();
-    });
+  should("ignore unknown keys, e.g. from an imported backup", async () => {
+    await Settings.setSettings({ scrollStepSize: 50, notASetting: "x" });
+    assert.equal(undefined, (await chrome.storage.local.get("notASetting")).notASetting);
+    assert.equal(50, Settings.get("scrollStepSize"));
+  });
 
-    should("Sets default/missing newTabDestination to browserNewTabPage", async () => {
-      await Settings.load();
-      const settings = Settings.getSettings();
-      assert.equal(Settings.newTabDestinations.browserNewTabPage, settings.newTabDestination);
-    });
+  should("not store values equal to the defaults", async () => {
+    await Settings.set("scrollStepSize", 123);
+    await Settings.set("scrollStepSize", Settings.defaultOptions.scrollStepSize);
+    assert.equal(undefined, (await chrome.storage.local.get("scrollStepSize")).scrollStepSize);
+  });
 
-    should("Preserve customUrl destination", async () => {
-      await chrome.storage.sync.set({ newTabDestination: Settings.newTabDestinations.customUrl });
-      await Settings.load();
-      const settings = Settings.getSettings();
-      assert.equal(Settings.newTabDestinations.customUrl, settings.newTabDestination);
-    });
+  should("default to the browser's new tab page", () => {
+    assert.equal(
+      Settings.newTabDestinations.browserNewTabPage,
+      Settings.get("newTabDestination"),
+    );
   });
 });

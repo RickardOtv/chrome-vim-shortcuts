@@ -55,10 +55,6 @@ context("convertToUrl", () => {
     assert.equal("http://127.0.0.1:8080", await UrlUtils.convertToUrl("127.0.0.1:8080"));
     assert.equal("http://[::]:8080", await UrlUtils.convertToUrl("[::]:8080"));
     assert.equal("view-source:    0.0.0.0", await UrlUtils.convertToUrl("view-source:    0.0.0.0"));
-    assert.equal(
-      "javascript:alert('25 % 20 * 25%20');",
-      await UrlUtils.convertToUrl("javascript:alert('25 % 20 * 25%20');"),
-    );
   });
 });
 
@@ -76,20 +72,20 @@ context("hasChromeProtocol", () => {
     assert.isTrue(UrlUtils.hasChromeProtocol("about:foobar"));
     assert.isTrue(UrlUtils.hasChromeProtocol("view-source:foobar"));
     assert.isTrue(UrlUtils.hasChromeProtocol("chrome-extension:foobar"));
-    assert.isTrue(UrlUtils.hasChromeProtocol("data:foobar"));
-    assert.isTrue(UrlUtils.hasChromeProtocol("data:"));
     assert.isFalse(UrlUtils.hasChromeProtocol(""));
     assert.isFalse(UrlUtils.hasChromeProtocol("about"));
     assert.isFalse(UrlUtils.hasChromeProtocol("view-source"));
     assert.isFalse(UrlUtils.hasChromeProtocol("chrome-extension"));
-    assert.isFalse(UrlUtils.hasChromeProtocol("data"));
-    assert.isFalse(UrlUtils.hasChromeProtocol("data :foobar"));
   });
 });
 
-context("hasJavascriptProtocol", () => {
-  should("detect javascript: URLs", () => {
-    assert.isTrue(UrlUtils.hasJavascriptProtocol("javascript:foobar"));
-    assert.isFalse(UrlUtils.hasJavascriptProtocol("http:foobar"));
+context("isBlockedUrl", () => {
+  should("block URLs which can run code or spoof content", () => {
+    assert.isTrue(UrlUtils.isBlockedUrl("javascript:foobar"));
+    assert.isTrue(UrlUtils.isBlockedUrl("  JavaScript:foobar"));
+    assert.isTrue(UrlUtils.isBlockedUrl("data:text/html,hi"));
+    assert.isTrue(UrlUtils.isBlockedUrl("vbscript:foobar"));
+    assert.isFalse(UrlUtils.isBlockedUrl("http://example.com"));
+    assert.isFalse(UrlUtils.isBlockedUrl("javascript tutorial"));
   });
 });

@@ -6,21 +6,8 @@ import * as bgUtils from "../background_scripts/bg_utils.js";
 import "../background_scripts/all_commands.js";
 import { Commands } from "../background_scripts/commands.js";
 import * as exclusions from "../background_scripts/exclusions.js";
-import "../background_scripts/completion/search_engines.js";
-import "../background_scripts/completion/search_wrapper.js";
-import "../background_scripts/completion/completers.js";
 import "../background_scripts/tab_operations.js";
 import * as marks from "../background_scripts/marks.js";
-
-import {
-  BookmarkCompleter,
-  CommandCompleter,
-  DomainCompleter,
-  HistoryCompleter,
-  MultiCompleter,
-  SearchEngineCompleter,
-  TabCompleter,
-} from "./completion/completers.js";
 
 // NOTE(philc): This file has many superfluous return statements in its functions, as a result of
 // converting from coffeescript to es6. Many can be removed, but I didn't take the time to
@@ -41,28 +28,6 @@ globalThis.tabLoadedHandlers = {}; // tabId -> function()
 const randomArray = globalThis.crypto.getRandomValues(new Uint8Array(32)); // 32-byte random token.
 const secretToken = randomArray.reduce((a, b) => a.toString(16) + b.toString(16));
 chrome.storage.session.set({ vimiumSecret: secretToken });
-
-const completionSources = {
-  bookmarks: new BookmarkCompleter(),
-  commands: new CommandCompleter(),
-  history: new HistoryCompleter(),
-  domains: new DomainCompleter(),
-  tabs: new TabCompleter(),
-  searchEngines: new SearchEngineCompleter(),
-};
-
-const completers = {
-  omni: new MultiCompleter([
-    completionSources.bookmarks,
-    completionSources.history,
-    completionSources.domains,
-    completionSources.tabs,
-    completionSources.searchEngines,
-  ]),
-  bookmarks: new MultiCompleter([completionSources.bookmarks]),
-  commands: new MultiCompleter([completionSources.commands]),
-  tabs: new MultiCompleter([completionSources.tabs]),
-};
 
 // A query dictionary for `chrome.tabs.query` that will return only the visible tabs.
 const visibleTabsQueryArgs = { currentWindow: true };
@@ -262,9 +227,7 @@ const BackgroundCommands = {
           let url;
           const destination = Settings.get("newTabDestination");
           const customUrl = Settings.get("newTabCustomUrl");
-          if (destination == Settings.newTabDestinations.vimiumNewTabPage) {
-            url = Settings.vimiumNewTabPageUrl;
-          } else if (destination == Settings.newTabDestinations.customUrl && customUrl.length > 0) {
+          if (destination == Settings.newTabDestinations.customUrl && customUrl.length > 0) {
             url = customUrl;
           } else {
             url = UrlUtils.chromeNewTabUrl;
@@ -604,28 +567,21 @@ const sendRequestHandlers = {
   runBackgroundCommand(request, sender) {
     return BackgroundCommands[request.registryEntry.command](request, sender);
   },
-  // Executes a command as if it was run in normal mode by a content script.
-  // Used by the Vomnibar's command completer, which can be used to execute any command in Vimium.
-  // The "request" must contain a "count" and a valid "command: RegistryEntry" parameter.
-  runNormalModeCommand(request, sender) {
-    chrome.tabs.sendMessage(sender.tab.id, request);
-  },
   // getCurrentTabUrl is used by the content scripts to get their full URL, because window.location
   // cannot help with Chrome-specific URLs like "view-source:http:..".
   getCurrentTabUrl({ tab }) {
     return tab.url;
   },
-  openUrlInNewTab: createRepeatCommand(async (request, callback) => {
-    await TabOperations.openUrlInNewTab(request, callback);
+  openUrlInNewTab: createRepeatCommand(async (request) => {
+    await TabOperations.openUrlInNewTab(request);
   }),
   async openUrlInNewWindow(request) {
     await TabOperations.openUrlInNewWindow(request);
   },
   async openUrlInIncognito(request) {
-    await chrome.windows.create({
-      incognito: true,
-      url: await UrlUtils.convertToUrl(request.url),
-    });
+    const url = await TabOperations.toNavigableUrl(request.url);
+    if (url == null) return;
+    await chrome.windows.create({ incognito: true, url });
   },
   openUrlInCurrentTab: TabOperations.openUrlInCurrentTab,
   openOptionsPageInNewTab(request) {
@@ -633,11 +589,6 @@ const sendRequestHandlers = {
       url: chrome.runtime.getURL("pages/options.html"),
       index: request.tab.index + 1,
     });
-  },
-
-  launchSearchQuery({ query, openInNewTab }) {
-    const disposition = openInNewTab ? "NEW_TAB" : "CURRENT_TAB";
-    chrome.search.query({ disposition, text: query });
   },
 
   domReady(_, sender) {
@@ -726,28 +677,6 @@ const sendRequestHandlers = {
     };
   },
 
-  async filterCompletions(request) {
-    const completer = completers[request.completerName];
-    let response = await completer.filter(request);
-
-    // NOTE(smblott): response contains `relevancyFunction` (function) properties which cause
-    // postMessage, below, to fail in Firefox. See #2576. We cannot simply delete these methods,
-    // as they're needed elsewhere. Converting the response to JSON and back is a quick and easy
-    // way to sanitize the object.
-    response = JSON.parse(JSON.stringify(response));
-
-    return response;
-  },
-
-  refreshCompletions(request) {
-    const completer = completers[request.completerName];
-    completer.refresh();
-  },
-
-  cancelCompletions(request) {
-    const completer = completers[request.completerName];
-    completer.cancel();
-  },
 };
 
 Utils.addChromeRuntimeOnMessageListener(
@@ -805,57 +734,6 @@ globalThis.runTests = () => open(chrome.runtime.getURL("tests/dom_tests/dom_test
 //
 // Begin initialization.
 //
-
-// True if the major version of Vimium has changed.
-// - previousVersion: this will be null for new installs.
-function majorVersionHasIncreased(previousVersion) {
-  const currentVersion = Utils.getCurrentVersion();
-  if (previousVersion == null) return false;
-  const currentMajorVersion = currentVersion.split(".").slice(0, 2).join(".");
-  const previousMajorVersion = previousVersion.split(".").slice(0, 2).join(".");
-  return Utils.compareVersions(currentMajorVersion, previousMajorVersion) == 1;
-}
-
-// Show notification on upgrade.
-async function showUpgradeMessageIfNecessary(onInstalledDetails) {
-  const currentVersion = Utils.getCurrentVersion();
-  // We do not show an upgrade message for patch/silent releases. Such releases have the same
-  // major and minor version numbers.
-  if (
-    !majorVersionHasIncreased(onInstalledDetails.previousVersion) ||
-    Settings.get("hideUpdateNotifications")
-  ) {
-    return;
-  }
-
-  // NOTE(philc): These notifications use the system notification UI. So, if you don't have
-  // notifications enabled from your browser (e.g. in Notification Settings in OSX), then
-  // chrome.notification.create will succeed, but you won't see it.
-  const notificationId = "VimiumUpgradeNotification";
-  await chrome.notifications.create(
-    notificationId,
-    {
-      type: "basic",
-      iconUrl: chrome.runtime.getURL("icons/icon128.png"),
-      title: "Vimium Upgrade",
-      message:
-        `Vimium has been upgraded to version ${currentVersion}. Click here for more information.`,
-      isClickable: true,
-    },
-  );
-  if (!chrome.runtime.lastError) {
-    chrome.notifications.onClicked.addListener(async function (id) {
-      if (id != notificationId) return;
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const tab = tabs[0];
-      TabOperations.openUrlInNewTab({
-        tab,
-        tabId: tab.id,
-        url: "https://github.com/philc/vimium/blob/master/CHANGELOG.md",
-      });
-    });
-  }
-}
 
 async function injectContentScriptsAndCSSIntoExistingTabs() {
   const manifest = chrome.runtime.getManifest();
@@ -918,8 +796,6 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     !bgUtils.isFirefox() &&
     (["chrome_update", "shared_module_update"].includes(details.reason));
   if (shouldInjectContentScripts) injectContentScriptsAndCSSIntoExistingTabs();
-
-  await showUpgradeMessageIfNecessary(details);
 });
 
 // Note that this event is not fired when an incognito profile is started.
@@ -933,7 +809,6 @@ Object.assign(globalThis, {
   // Exported for tests:
   HintCoordinator,
   BackgroundCommands,
-  majorVersionHasIncreased,
   nextZoomLevel,
 });
 

@@ -46,12 +46,12 @@ const createStorageAPI = (areaName) => {
       }
     }),
 
-    remove: withPromise(function (key) {
+    remove: withPromise(function (keys) {
       chrome.runtime.lastError = undefined;
-      if (key in this.store) {
+      for (const key of [keys].flat()) {
         delete this.store[key];
+        globalThis.chrome.storage.onChanged.callEmpty(key, areaName);
       }
-      globalThis.chrome.storage.onChanged.callEmpty(key);
     }),
 
     clear: withPromise(function () {
@@ -120,10 +120,6 @@ globalThis.chrome = {
 
   scripting: {
     executeScript() {},
-  },
-
-  search: {
-    query() {},
   },
 
   tabs: {
@@ -195,6 +191,7 @@ globalThis.chrome = {
       },
     },
     update(_id, _properties) {},
+    create(_config) {},
   },
 
   browserAction: {
@@ -211,7 +208,7 @@ globalThis.chrome = {
         this.func = func;
       },
 
-      // Fake a callback from chrome.storage.sync.
+      // Fake a storage change callback.
       call(key, value, area) {
         chrome.runtime.lastError = undefined;
         const key_value = {};
@@ -219,23 +216,19 @@ globalThis.chrome = {
         if (this.func) return this.func(key_value, area);
       },
 
-      callEmpty(key) {
+      callEmpty(key, area) {
         chrome.runtime.lastError = undefined;
         if (this.func) {
           const items = {};
           items[key] = {};
-          this.func(items, "sync");
+          this.func(items, area);
         }
       },
     },
 
-    local: createStorageAPI("sync"),
+    local: createStorageAPI("local"),
     sync: createStorageAPI("sync"),
     session: createStorageAPI("session"),
-  },
-
-  bookmarks: {
-    getTree: () => [],
   },
 };
 

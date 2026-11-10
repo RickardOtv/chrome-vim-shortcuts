@@ -22,20 +22,9 @@ class NormalMode extends KeyHandlerMode {
         this.setKeyMapping(changes.normalModeKeyStateMapping.newValue);
       }
     });
-
-    // Listen and handle "command" events coming from the background and originally sent from the
-    // Vomnibar page.
-    Utils.addChromeRuntimeOnMessageListener(["runNormalModeCommand"], (request, _sender) => {
-      this.commandHandler(request);
-    });
   }
 
   commandHandler({ command: registryEntry, count }) {
-    if (registryEntry.command === "Vomnibar.activateCommandSelection") {
-      // Store the raw count so the Vomnibar can propagate it to the selected command.
-      registryEntry.options.prefixCount = count;
-    }
-
     if (registryEntry.options.count) {
       count = (count ?? 1) * registryEntry.options.count;
     }
@@ -364,15 +353,6 @@ const NormalModeCommands = {
   "LinkHints.activateModeToOpenIncognito": LinkHints.activateModeToOpenIncognito.bind(LinkHints),
   "LinkHints.activateModeToDownloadLink": LinkHints.activateModeToDownloadLink.bind(LinkHints),
   "LinkHints.activateModeToCopyLinkUrl": LinkHints.activateModeToCopyLinkUrl.bind(LinkHints),
-
-  "Vomnibar.activate": Vomnibar.activate.bind(Vomnibar),
-  "Vomnibar.activateInNewTab": Vomnibar.activateInNewTab.bind(Vomnibar),
-  "Vomnibar.activateTabSelection": Vomnibar.activateTabSelection.bind(Vomnibar),
-  "Vomnibar.activateBookmarks": Vomnibar.activateBookmarks.bind(Vomnibar),
-  "Vomnibar.activateBookmarksInNewTab": Vomnibar.activateBookmarksInNewTab.bind(Vomnibar),
-  "Vomnibar.activateCommandSelection": Vomnibar.activateCommandSelection.bind(Vomnibar),
-  "Vomnibar.activateEditUrl": Vomnibar.activateEditUrl.bind(Vomnibar),
-  "Vomnibar.activateEditUrlInNewTab": Vomnibar.activateEditUrlInNewTab.bind(Vomnibar),
 
   "Marks.activateCreateMode": Marks.activateCreateMode.bind(Marks),
   "Marks.activateGotoMode": Marks.activateGotoMode.bind(Marks),

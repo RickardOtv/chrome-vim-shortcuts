@@ -1,5 +1,5 @@
-// A UIComponent is an iframe containing a Vimium extension page, like the Vomnibar. This class
-// provides methods that content scripts can use to interact with that page:
+// A UIComponent is an iframe containing a Vimium extension page, like the HUD or help dialog. This
+// class provides methods that content scripts can use to interact with that page:
 // - show
 // - hide
 // - postMessage
@@ -122,7 +122,7 @@ class UIComponent {
     });
   }
 
-  // This ensures that Vimium's UI elements (HUD, Vomnibar) honor the browser's light/dark theme
+  // This ensures that Vimium's UI elements (HUD, help dialog) honor the browser's light/dark theme
   // preference, even when the user is also using the DarkReader extension. DarkReader is the most
   // popular dark mode Chrome extension in use as of 2020.
   handleDarkReaderFilter() {

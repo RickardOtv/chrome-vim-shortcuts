@@ -5,73 +5,27 @@
 import * as bgUtils from "../background_scripts/bg_utils.js";
 import "../lib/url_utils.js";
 
-// Opens request.url in the current tab. If the URL is keywords, search for them in the default
-// search engine. If the URL is a javascript: snippet, execute it in the current tab.
-export async function openUrlInCurrentTab(request, sender) {
-  const urlStr = await UrlUtils.convertToUrl(request.url);
-  if (urlStr == null) {
-    // The requested destination is not a URL, so treat it like a search query.
-    chrome.search.query({ text: request.url });
-  } else if (UrlUtils.hasJavascriptProtocol(urlStr)) {
-    // javascript: URLs, i.e. "bookmarklets", are always run against the tab's top-level frame.
+// Converts text (a URL, or search terms) into a URL we are willing to open. Returns null for URLs
+// which can run code or spoof content (javascript:, data:). Anything that isn't a URL becomes a
+// search with the default search engine.
+export async function toNavigableUrl(text) {
+  if (text == null || UrlUtils.isBlockedUrl(text)) return null;
+  const url = await UrlUtils.convertToUrl(text);
+  return url ?? UrlUtils.createSearchUrl(text.trim(), Settings.get("searchUrl"));
+}
 
-    // Since we're using chrome.scripting.executeScript to execute the javascript, assert that the
-    // request is coming from either the page's top-level frame, or one of Vimium's iframes, like
-    // the Vomnibar. It should be impossible for the request to come from any other frame, but this
-    // check serves as a defensive guard to prevent a compromised Vimium content script in a
-    // subframe with a different origin from being able to run javascript on the main frame's
-    // origin.
-    const isTopFrame = sender.frameId === 0;
-    const isVimiumPage = sender.url?.startsWith("chrome-extension://");
-    if (!isTopFrame && !isVimiumPage) {
-      console.warn(
-        "openUrlInCurrentTab: error: a javascript: URL was requested from an untrusted frame",
-        { frameId: sender.frameId, url: sender.url },
-      );
-      return;
-    }
-
-    // Note that when injecting JavaScript, it's subject to the site's CSP. Sites with strict CSPs
-    // (like github.com, developer.mozilla.org) will raise an error when we try to run this code.
-    // See https://github.com/philc/vimium/issues/4331.
-    const scriptingArgs = {
-      target: {
-        tabId: request.tabId,
-        frameIds: [0], // Run the script against the top-level frame.
-      },
-      func: (text) => {
-        const prefix = "javascript:";
-        text = text.slice(prefix.length).trim();
-        // TODO(philc): Why do we try to double decode here? Discover and then document it.
-        text = decodeURIComponent(text);
-        try {
-          text = decodeURIComponent(text);
-        } catch {
-          // Swallow
-        }
-        const el = document.createElement("script");
-        el.textContent = text;
-        document.head.appendChild(el);
-      },
-      args: [urlStr],
-    };
-    if (!bgUtils.isFirefox()) {
-      // The MAIN world -- where the webpage runs -- is less privileged than the ISOLATED world.
-      // Specifying a world is required for Chrome, but not Firefox.
-      // As of Firefox 118, specifying "MAIN" as the world is not yet supported.
-      scriptingArgs.world = "MAIN";
-    }
-    chrome.scripting.executeScript(scriptingArgs);
-  } else {
-    // The requested destination is a regular URL.
-    chrome.tabs.update(request.tabId, { url: urlStr });
-  }
+// Opens request.url in the current tab.
+export async function openUrlInCurrentTab(request) {
+  const url = await toNavigableUrl(request.url);
+  if (url == null) return;
+  await chrome.tabs.update(request.tabId, { url });
 }
 
 // Opens request.url in new tab and switches to it.
 // Returns the created tab.
 export async function openUrlInNewTab(request) {
-  const urlStr = await UrlUtils.convertToUrl(request.url);
+  const url = await toNavigableUrl(request.url);
+  if (url == null) return;
   const tabConfig = { windowId: request.tab.windowId };
   const position = request.position;
   let tabIndex = null;
@@ -94,46 +48,21 @@ export async function openUrlInNewTab(request) {
   tabConfig.index = tabIndex;
   tabConfig.active = request.active ?? true;
   tabConfig.openerTabId = request.tab.id;
-
-  let newTab;
-
-  if (urlStr == null) {
-    // The requested destination is not a URL, so treat it like a search query.
-    //
-    // The chrome.search.query API lets us open the search in a new tab, but it doesn't let us
-    // control the precise position of that tab. So, we open a new blank tab using our position
-    // parameter, and then execute the search in that tab.
-
-    // In Chrome, if we create a blank tab and call chrome.search.query, the omnibar is focused,
-    // which we don't want. To work around that, first create an empty page. This is not needed in
-    // Firefox. And in fact, firefox doesn't support a data:text URL to the chrome.tab.create API.
-    tabConfig.url = bgUtils.isFirefox() ? null : "data:text/html,<html></html>";
-    newTab = await chrome.tabs.create(tabConfig);
-    const query = request.url;
-    await chrome.search.query({ text: query, tabId: newTab.id });
-  } else {
-    // The requested destination is a regular URL.
-    // Firefox does not support "about:newtab" in chrome.tabs.create, so omit it.
-    if (urlStr != UrlUtils.chromeNewTabUrl) {
-      tabConfig.url = urlStr;
-    }
-    newTab = await chrome.tabs.create(tabConfig);
+  // Firefox does not support "about:newtab" in chrome.tabs.create, so omit it.
+  if (url != UrlUtils.chromeNewTabUrl) {
+    tabConfig.url = url;
   }
-  return newTab;
+  return await chrome.tabs.create(tabConfig);
 }
 
 // Open request.url in new window and switch to it.
 export async function openUrlInNewWindow(request) {
-  const winConfig = {
-    url: await UrlUtils.convertToUrl(request.url),
-    active: true,
-  };
-  if (request.active != null) {
-    winConfig.active = request.active;
-  }
-  // Firefox does not support "about:newtab" in chrome.tabs.create, so omit it.
-  if (tabConfig["url"] === UrlUtils.chromeNewTabUrl) {
-    delete winConfig["url"];
+  const url = await toNavigableUrl(request.url);
+  if (url == null) return;
+  const winConfig = { focused: request.active ?? true };
+  // Firefox does not support "about:newtab" in chrome.windows.create, so omit it.
+  if (url != UrlUtils.chromeNewTabUrl) {
+    winConfig.url = url;
   }
   await chrome.windows.create(winConfig);
 }

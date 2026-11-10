@@ -12,12 +12,10 @@ import "../../content_scripts/mode.js";
 import "../../content_scripts/mode_key_handler.js";
 import "../../content_scripts/marks.js";
 import "../../content_scripts/link_hints.js";
-import "../../content_scripts/vomnibar.js";
 // Include mode_normal to check that all commands have been implemented.
 import "../../content_scripts/mode_normal.js";
 import "../../content_scripts/link_hints.js";
 import "../../content_scripts/marks.js";
-import "../../content_scripts/vomnibar.js";
 
 await Commands.init();
 
@@ -60,7 +58,7 @@ context("KeyMappingsParser", () => {
   });
 
   should("parse option values surrounded by quotes", () => {
-    const { keyToRegistryEntry } = KeyMappingsParser.parse('map v Vomnibar.activate query="a b"');
+    const { keyToRegistryEntry } = KeyMappingsParser.parse('map v scrollDown query="a b"');
     const entry = keyToRegistryEntry["v"];
     assert.equal({ query: "a b" }, entry.options);
   });

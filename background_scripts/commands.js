@@ -446,16 +446,6 @@ const defaultKeyMappings = {
   "*": "findSelected",
   "#": "findSelectedBackwards",
 
-  // Vomnibar
-  "o": "Vomnibar.activate",
-  "O": "Vomnibar.activateInNewTab",
-  "T": "Vomnibar.activateTabSelection",
-  "b": "Vomnibar.activateBookmarks",
-  "B": "Vomnibar.activateBookmarksInNewTab",
-  ":": "Vomnibar.activateCommandSelection",
-  "ge": "Vomnibar.activateEditUrl",
-  "gE": "Vomnibar.activateEditUrlInNewTab",
-
   // Navigating history
   "H": "goBack",
   "L": "goForward",

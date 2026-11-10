@@ -1,6 +1,6 @@
 import * as TabOperations from "./tab_operations.js";
 
-// This returns the key which is used for storing mark locations in chrome.storage.sync.
+// This returns the key which is used for storing mark locations in chrome.storage.local.
 // Exported for tests.
 export function getLocationKey(markName) {
   return `vimiumGlobalMark|${markName}`;
@@ -97,15 +97,13 @@ async function focusOrLaunch(markInfo, req) {
     gotoPositionInTab(Object.assign(markInfo, { tabId: tab.id }));
   } else {
     // There is no existing matching tab. We'll have to create one.
-    TabOperations.openUrlInNewTab(
+    const tab = await TabOperations.openUrlInNewTab(
       Object.assign(req, { url: getBaseUrl(markInfo.url) }),
-      (tab) => {
-        // Note. tabLoadedHandlers is defined in "main.js". The handler below will be called when
-        // the tab is loaded, its DOM is ready and it registers with the background page.
-        return tabLoadedHandlers[tab.id] = () =>
-          gotoPositionInTab(Object.assign(markInfo, { tabId: tab.id }));
-      },
     );
+    if (tab == null) return;
+    // Note. tabLoadedHandlers is defined in "main.js". The handler below will be called when the
+    // tab is loaded, its DOM is ready and it registers with the background page.
+    tabLoadedHandlers[tab.id] = () => gotoPositionInTab(Object.assign(markInfo, { tabId: tab.id }));
   }
 }
 

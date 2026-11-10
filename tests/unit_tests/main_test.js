@@ -65,11 +65,6 @@ context("createTab command", () => {
     assert.equal("https://example.com", tabCreated.url);
   });
 
-  should("open the vimium new tab page", async () => {
-    await Settings.set("newTabDestination", Settings.newTabDestinations.vimiumNewTabPage);
-    await BackgroundCommands.createTab(requestStub);
-    assert.equal(Settings.vimiumNewTabPageUrl, tabCreated.url);
-  });
 
   should("open the browser's new tab page", async () => {
     await Settings.set("newTabDestination", Settings.newTabDestinations.browserNewTabPage);
@@ -200,15 +195,5 @@ context("Selecting frames", () => {
 
     await BackgroundCommands.nextFrame(1, 0);
     assert.equal([1], focusedFrames);
-  });
-});
-
-context("majorVersionHasIncreased", () => {
-  should("return whether the major version has changed", () => {
-    assert.equal(false, majorVersionHasIncreased(null));
-    shoulda.stub(Utils, "getCurrentVersion", () => "2.0.1");
-    assert.equal(false, majorVersionHasIncreased("2.0.0"));
-    shoulda.stub(Utils, "getCurrentVersion", () => "2.1.0");
-    assert.equal(true, majorVersionHasIncreased("2.0.0"));
   });
 });
