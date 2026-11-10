@@ -29,6 +29,18 @@ const allCommands = [
   },
 
   {
+    name: "nextSearchResult",
+    desc: "Select the next search result (scrolls down on other pages)",
+    group: "navigation",
+  },
+
+  {
+    name: "previousSearchResult",
+    desc: "Select the previous search result (scrolls up on other pages)",
+    group: "navigation",
+  },
+
+  {
     name: "scrollToTop",
     desc: "Scroll to the top of the page",
     group: "navigation",

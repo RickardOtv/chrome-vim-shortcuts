@@ -106,6 +106,12 @@ const NormalModeCommands = {
   scrollDown(count) {
     Scroller.scrollBy("y", Settings.get("scrollStepSize") * count);
   },
+  nextSearchResult(count) {
+    if (!SearchResults.move(count)) NormalModeCommands.scrollDown(count);
+  },
+  previousSearchResult(count) {
+    if (!SearchResults.move(-count)) NormalModeCommands.scrollUp(count);
+  },
   scrollPageUp(count) {
     Scroller.scrollBy("y", "viewSize", (-1 / 2) * count);
   },

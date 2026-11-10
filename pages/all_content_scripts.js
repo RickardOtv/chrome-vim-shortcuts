@@ -15,6 +15,7 @@ import "../content_scripts/mode.js";
 import "../content_scripts/ui_component.js";
 import "../content_scripts/link_hints.js";
 import "../content_scripts/scroller.js";
+import "../content_scripts/search_results.js";
 import "../content_scripts/marks.js";
 import "../content_scripts/mode_insert.js";
 import "../content_scripts/mode_find.js";

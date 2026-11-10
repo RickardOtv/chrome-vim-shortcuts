@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Vimium",
-  "version": "2.4.2",
-  "description": "The Hacker's Browser. Vimium provides keyboard shortcuts for navigation and control in the spirit of Vim.",
+  "name": "Vim Shortcuts",
+  "version": "0.1.0",
+  "description": "Vim-style keyboard navigation. A trimmed fork of Vimium that makes no network requests.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -55,6 +55,7 @@
         "content_scripts/ui_component.js",
         "content_scripts/link_hints.js",
         "content_scripts/scroller.js",
+        "content_scripts/search_results.js",
         "content_scripts/marks.js",
         "content_scripts/mode_insert.js",
         "content_scripts/mode_find.js",

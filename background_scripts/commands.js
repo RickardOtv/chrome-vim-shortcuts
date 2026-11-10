@@ -407,8 +407,10 @@ const defaultKeyMappings = {
   // Navigating the current page
   "j": "scrollDown",
   "k": "scrollUp",
-  "h": "scrollLeft",
-  "l": "scrollRight",
+  "H": "scrollLeft",
+  "L": "scrollRight",
+  "<down>": "nextSearchResult",
+  "<up>": "previousSearchResult",
   "gg": "scrollToTop",
   "G": "scrollToBottom",
   "zH": "scrollToLeft",
@@ -447,8 +449,8 @@ const defaultKeyMappings = {
   "#": "findSelectedBackwards",
 
   // Navigating history
-  "H": "goBack",
-  "L": "goForward",
+  "h": "goBack",
+  "l": "goForward",
 
   // Manipulating tabs
   "K": "nextTab",
