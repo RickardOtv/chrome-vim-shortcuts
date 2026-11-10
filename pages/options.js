@@ -59,7 +59,7 @@ export async function init() {
   );
   document.querySelector("#upload-backup").addEventListener(
     "change",
-    () => onUploadBackupClicked(),
+    (event) => onUploadBackupClicked(event),
   );
 
   for (const el of document.querySelectorAll(".reset-link a")) {
@@ -316,7 +316,19 @@ function onDownloadBackupClicked() {
   document.querySelector("#download-backup").href = URL.createObjectURL(blob);
 }
 
-function onUploadBackupClicked() {
+// A backup can change key mappings and inject CSS into every page, so show those before applying.
+function confirmRiskySettings(backup) {
+  const changed = ["keyMappings", "userDefinedLinkHintCss"].filter((key) =>
+    typeof backup[key] == "string" && backup[key] != Settings.get(key)
+  );
+  if (changed.length == 0) return true;
+  const details = changed.map((key) => `${key}:\n${backup[key].slice(0, 1000)}`).join("\n\n");
+  return confirm(
+    `This backup changes:\n\n${details}\n\nOnly apply backups you made yourself. Apply it?`,
+  );
+}
+
+function onUploadBackupClicked(event) {
   if (document.activeElement) {
     document.activeElement.blur();
   }
@@ -335,6 +347,7 @@ function onUploadBackupClicked() {
         alert("Failed to parse Vimium backup: " + error);
         return;
       }
+      if (backup == null || typeof backup != "object" || !confirmRiskySettings(backup)) return;
 
       await Settings.setSettings(backup);
       setFormFromSettings(Settings.getSettings());

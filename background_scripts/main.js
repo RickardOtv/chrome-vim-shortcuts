@@ -239,7 +239,8 @@ const BackgroundCommands = {
     if (request.registryEntry.options.incognito || request.registryEntry.options.window) {
       // Firefox does not allow an incognito window to be created with the URL about:newtab. It
       // throws this error: "Illegal URL: about:newtab".
-      const urls = request.urls.filter((u) => u != UrlUtils.chromeNewTabUrl);
+      const checked = await Promise.all(request.urls.map(TabOperations.toNavigableUrl));
+      const urls = checked.filter((u) => u != null && u != UrlUtils.chromeNewTabUrl);
       const windowConfig = {
         url: urls,
         incognito: request.registryEntry.options.incognito || false,

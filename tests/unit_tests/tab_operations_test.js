@@ -35,6 +35,9 @@ context("TabOperations openurlInCurrentTab", () => {
     await to.openUrlInCurrentTab({ url: "javascript:console.log('hello')" });
     await to.openUrlInCurrentTab({ url: " JAVASCRIPT:console.log('hello')" });
     await to.openUrlInCurrentTab({ url: "data:text/html,<h1>hi</h1>" });
+    await to.openUrlInCurrentTab({ url: "file:///etc/passwd" });
+    await to.openUrlInCurrentTab({ url: "chrome://settings" });
+    await to.openUrlInCurrentTab({ url: "chrome-extension://abc/pages/reload.html" });
     assert.isFalse(called);
   });
 });

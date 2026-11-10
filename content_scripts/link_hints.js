@@ -121,7 +121,9 @@ const COPY_LINK_TEXT = {
   name: "copy-link-text",
   indicator: "Copy link text",
   linkActivator(link) {
-    let text = link.textContent;
+    // Copy only the visible text, on one line. textContent would include hidden text and newlines,
+    // which a page can use to sneak a command into a terminal paste.
+    let text = (link.innerText ?? link.textContent).replace(/\s+/g, " ").trim();
     if (text.length > 0) {
       HUD.copyToClipboard(text);
       if (28 < text.length) text = text.slice(0, 26) + "....";
@@ -212,7 +214,7 @@ const HintCoordinator = {
       handler: "prepareToActivateLinkHintsMode",
       modeIndex: availableModes.indexOf(mode),
       isExtensionPage,
-      requestedByHelpDialog: globalThis.isVimiumHelpDialog,
+      requestedByHelpDialog: globalThis.isVimiumHelpDialogPage === true,
     });
   },
 
@@ -226,7 +228,7 @@ const HintCoordinator = {
     // If link hints is launched within the help dialog, then we only offer hints from that frame.
     // This improves the usability of the help dialog on the options page (particularly for
     // selecting command names).
-    if (requestedByHelpDialog && !globalThis.isVimiumHelpDialog) {
+    if (requestedByHelpDialog && globalThis.isVimiumHelpDialogPage !== true) {
       this.localHints = [];
     } else {
       this.localHints = LocalHints.getLocalHints(requireHref);

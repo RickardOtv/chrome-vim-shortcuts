@@ -185,4 +185,16 @@ Being explicit about how each file was reviewed:
 | 22 | Info | Non-URL text pasted with `p`/`P` is sent to Google. This is the only network egress, and it needs a key press. A password left on the clipboard would leak on an accidental `p`. | Optional: ask first, or only open real URLs. |
 | 23 | Info | Dead or buggy code: `simulateClickDefaultAction`, `escapeHtml`, `selectSpecificTab` and `reload.html`/`reload.js` are unused. Bugs: replay check (`link_hints.js:268`), `passNextKeyKeys` listens to the wrong storage area, `pathName` typo, `toggleMuteTab` never unmutes, duplicate settings listeners, global-marks crashes, Google host regex matches `google.attacker.com`. | Delete the dead code. Fix the bugs. |
 
-Full reviewer reports, with file and line references and the "verified safe" lists: `audit/second-pass-{bg,hints,modes,pages}.md`. Fixes for 12–23 are not done yet.
+Full reviewer reports, with file and line references and the "verified safe" lists: `audit/second-pass-{bg,hints,modes,pages}.md`. ### Fix status, second pass
+
+| # | Status | What changed |
+|---|---|---|
+| 12 | Fixed | `chrome_api_stubs.js` never installs inside the real extension (`chrome.runtime.id` present). The secret check requires a non-empty string. Confirmed exploitable in a browser before the fix (the framed HUD answered); now it doesn't. |
+| 13 | Fixed | Test and help-page flags only count when exactly `true`, which a page can't fake with an element. Confirmed in a browser that `<div id=vimiumDomTestsAreRunning>` switched on test mode before the fix. Side effect: link hints inside the help dialog now work as upstream intended (the old code read a misspelled flag). |
+| 14 | Fixed | New `UrlUtils.isSafeToOpen` allowlist (http, https, new tab, `about:blank`, view-source of http(s)), checked on the final URL, including search URLs. `createTab` in a window or incognito now uses the same check. Dead `simulateClickDefaultAction` deleted. In the browser test, Chrome also refused these opens before the fix, so the new code is a second layer here. |
+| 15 | Fixed | `Settings.validSettings` checks every value's type, plus allowed values for `newTabDestination`, `searchUrl`, `newTabCustomUrl`, `exclusionRules` and `scrollStepSize`. It runs on save, import and load. Import shows changed key mappings and custom CSS and asks before applying. |
+| 16 | Fixed | Shadow roots closed. The iframe `load` handler only acts on the first trusted event. Fixed the dead "load once" guard. |
+| 17 | Partly fixed | `command_listing.html` and `tlds.txt` removed from web-accessible resources. `use_dynamic_url` was tried, but it breaks HUD clipboard access (Chrome permissions policy), so the HUD and help pages still have fixed URLs and a site can still detect the extension. |
+| 18 | Fixed | "Yank link text" copies visible text (`innerText`) on one line. |
+
+The headless Chrome end-to-end test now has 37 checks, including attack attempts for #12–#14, #16 and #17. #19–#23 are still open.

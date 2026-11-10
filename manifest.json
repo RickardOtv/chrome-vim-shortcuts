@@ -106,12 +106,7 @@
       "resources": [
         "content_scripts/vimium.css",
         "pages/hud_page.html",
-        "pages/help_dialog_page.html",
-        // This allows one to script the reloading of Vimium.
-        // This should only be enabled in development.
-        // "pages/reload.html",
-        "pages/command_listing.html",
-        "resources/tlds.txt"
+        "pages/help_dialog_page.html"
       ],
       "matches": [
         "<all_urls>"

@@ -11,7 +11,7 @@ export async function registerPortWithOwnerPage(event) {
   // fetched from session storage, so if it matches, then we know that event.ports came from the
   // Vimium extension.
   const secret = (await chrome.storage.session.get("vimiumSecret")).vimiumSecret;
-  if (event.data !== secret) {
+  if (typeof secret !== "string" || secret.length == 0 || event.data !== secret) {
     Utils.debugLog("ui_component_messenger.js: vimiumSecret is incorrect.");
     return;
   }

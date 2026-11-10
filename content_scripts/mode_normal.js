@@ -51,7 +51,7 @@ class NormalMode extends KeyHandlerMode {
     if (registryEntry.topFrame) {
       // We never return to a UI-component frame (e.g. the help dialog), it might have lost the
       // focus.
-      const sourceFrameId = globalThis.isVimiumUIComponent ? 0 : frameId;
+      const sourceFrameId = globalThis.isVimiumUIComponent === true ? 0 : frameId;
       chrome.runtime.sendMessage({
         handler: "sendMessageToFrames",
         message: { handler: "runInTopFrame", sourceFrameId, registryEntry },

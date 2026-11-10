@@ -40,7 +40,7 @@ const HUD = {
       focusable = true;
     }
     if (this.hudUI == null) {
-      const queryString = globalThis.vimiumDomTestsAreRunning ? "?dom_tests=true" : "";
+      const queryString = globalThis.vimiumDomTestsAreRunning === true ? "?dom_tests=true" : "";
       this.hudUI = new UIComponent();
       this.hudUI.load(
         `pages/hud_page.html${queryString}`,

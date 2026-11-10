@@ -27,7 +27,7 @@ class UIComponent {
   // - className: the CSS class to add to the iframe.
   // - messageHandler: optional; a function to handle messages from the iframe's page.
   async load(iframeUrl, className, messageHandler) {
-    if (this.iframeFrameElement) throw new Error("init should only be called once.");
+    if (this.iframeElement) throw new Error("init should only be called once.");
     this.messageHandler = messageHandler;
     const isDomTests = iframeUrl.includes("?dom_tests=true");
     this.iframeElement = DomUtils.createElement("iframe");
@@ -57,7 +57,8 @@ class UIComponent {
     const shadowWrapper = DomUtils.createElement("div");
     // Prevent the page's CSS from interfering with this container div.
     shadowWrapper.className = "vimium-reset";
-    this.shadowDOM = shadowWrapper.attachShadow({ mode: "open" });
+    // Closed, so page scripts can't reach the iframe (to re-point, hide or overlay it).
+    this.shadowDOM = shadowWrapper.attachShadow({ mode: "closed" });
     this.shadowDOM.appendChild(styleSheet);
     // Allow a user's custom CSS to style iframe element inside this shadow DOM.
     DomUtils.injectUserCss(this.shadowDOM);
@@ -80,7 +81,11 @@ class UIComponent {
     const secret = (await chrome.storage.session.get("vimiumSecret")).vimiumSecret;
     const { port1, port2 } = new MessageChannel();
     this.messageChannelPorts = [port1, port2];
-    this.iframeElement.addEventListener("load", () => {
+    // Handle only the first real load. A page can dispatch fake "load" events; acting on one would
+    // send port2 to the not-yet-loaded frame, where it is lost.
+    const onLoad = (event) => {
+      if (!event.isTrusted) return;
+      this.iframeElement.removeEventListener("load", onLoad);
       // Get vimiumSecret so the iframe can determine that our message isn't the page
       // impersonating us.
       // Outside of tests, target origin starts with chrome-extension://{vimium's-id}
@@ -119,7 +124,8 @@ class UIComponent {
             this.messageHandler?.(event);
         }
       };
-    });
+    };
+    this.iframeElement.addEventListener("load", onLoad);
   }
 
   // This ensures that Vimium's UI elements (HUD, help dialog) honor the browser's light/dark theme

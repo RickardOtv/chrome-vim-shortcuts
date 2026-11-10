@@ -332,7 +332,7 @@ class VisualMode extends KeyHandlerMode {
     if (this.name !== "caret") {
       if (["Caret", "Range"].includes(this.selection.type)) {
         let selectionRect = this.selection.getRangeAt(0).getBoundingClientRect();
-        if (globalThis.vimiumDomTestsAreRunning) {
+        if (globalThis.vimiumDomTestsAreRunning === true) {
           // We're running the DOM tests, where getBoundingClientRect() isn't available.
           if (!selectionRect) {
             selectionRect = { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 };

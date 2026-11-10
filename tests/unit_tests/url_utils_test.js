@@ -79,6 +79,28 @@ context("hasChromeProtocol", () => {
   });
 });
 
+context("isSafeToOpen", () => {
+  should("allow web pages and the browser's new tab and blank pages", () => {
+    assert.isTrue(UrlUtils.isSafeToOpen("https://example.com"));
+    assert.isTrue(UrlUtils.isSafeToOpen("http://example.com/a?b"));
+    assert.isTrue(UrlUtils.isSafeToOpen("about:newtab"));
+    assert.isTrue(UrlUtils.isSafeToOpen("about:blank"));
+    assert.isTrue(UrlUtils.isSafeToOpen("view-source:https://example.com"));
+  });
+
+  should("refuse everything else", () => {
+    assert.isFalse(UrlUtils.isSafeToOpen("file:///etc/passwd"));
+    assert.isFalse(UrlUtils.isSafeToOpen("chrome://settings"));
+    assert.isFalse(UrlUtils.isSafeToOpen("chrome-extension://abc/pages/reload.html"));
+    assert.isFalse(UrlUtils.isSafeToOpen("vscode://file/x"));
+    assert.isFalse(UrlUtils.isSafeToOpen("about:config"));
+    assert.isFalse(UrlUtils.isSafeToOpen("view-source:file:///etc/passwd"));
+    assert.isFalse(UrlUtils.isSafeToOpen("javascript:alert(1)"));
+    assert.isFalse(UrlUtils.isSafeToOpen("data:text/html,hi"));
+    assert.isFalse(UrlUtils.isSafeToOpen(null));
+  });
+});
+
 context("isBlockedUrl", () => {
   should("block URLs which can run code or spoof content", () => {
     assert.isTrue(UrlUtils.isBlockedUrl("javascript:foobar"));

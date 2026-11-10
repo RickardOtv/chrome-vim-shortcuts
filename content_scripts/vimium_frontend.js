@@ -113,7 +113,7 @@ class GrabBackFocus extends Mode {
 
     if (!this.logged && (element !== document.body)) {
       this.logged = true;
-      if (!globalThis.vimiumDomTestsAreRunning) {
+      if (globalThis.vimiumDomTestsAreRunning !== true) {
         console.log("An auto-focusing action on this page was blocked by Vimium.");
       }
     }
@@ -284,7 +284,7 @@ const flashFrame = (() => {
       highlightedFrameElement = DomUtils.createElement("div");
 
       // Create a shadow DOM wrapping the frame so the page's styles don't interfere with ours.
-      const shadowDOM = highlightedFrameElement.attachShadow({ mode: "open" });
+      const shadowDOM = highlightedFrameElement.attachShadow({ mode: "closed" });
 
       // Inject stylesheet.
       const styleEl = DomUtils.createElement("style");
@@ -444,12 +444,12 @@ const HelpDialog = {
   helpUI: null,
 
   isShowing() {
-    if (globalThis.isVimiumHelpDialogPage) return true;
+    if (globalThis.isVimiumHelpDialogPage === true) return true;
     return this.helpUI && this.helpUI.showing;
   },
 
   abort() {
-    if (globalThis.isVimiumHelpDialogPage) throw new Error("This should be impossible.");
+    if (globalThis.isVimiumHelpDialogPage === true) throw new Error("This should be impossible.");
     if (this.isShowing()) {
       return this.helpUI.hide(false);
     }
@@ -458,7 +458,7 @@ const HelpDialog = {
   async toggle(request) {
     // If we're in the help dialog page already and the user has typed a key to show the help
     // dialog, then we should hide it.
-    if (globalThis.isVimiumHelpDialogPage) return HelpDialogPage.hide();
+    if (globalThis.isVimiumHelpDialogPage === true) return HelpDialogPage.hide();
 
     if (this.helpUI == null) {
       await DomUtils.documentComplete();
