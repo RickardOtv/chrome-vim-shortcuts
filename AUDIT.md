@@ -27,6 +27,24 @@ There are, however, real risks for a work setting: one way a website can get Jav
 | 10 | Info | No explicit Content Security Policy | Add |
 | 11 | Info | Bug: "open in new window" always throws | Fix |
 
+## Fix status (branch `trim`, commit `d7c1ffb3`)
+
+| # | Status | What changed |
+|---|---|---|
+| 1 | Fixed | `javascript:` execution removed. `TabOperations.toNavigableUrl` refuses `javascript:`, `data:` and `vbscript:` for every open-URL path (current tab, new tab, new window, incognito). |
+| 2 | Fixed | Omnibar, completers, search engines and suggestion code deleted. Non-URL text becomes a plain search URL (`searchUrl` setting, Google by default). |
+| 3 | Fixed | Vimium new-tab option removed; default is the browser's own new tab page. |
+| 4 | Fixed | Settings read and written only in `chrome.storage.local`. Old sync migrations removed. |
+| 5 | Partly fixed | Custom hint CSS and backup import kept (your choice). Import now drops any key that isn't a known setting. Only import your own backups. |
+| 6 | Open | Marks kept, still in the site's `localStorage`. Planned. |
+| 7 | Fixed | Hint labels built with `textContent` spans. |
+| 8 | Fixed | `data:` blocked (see 1) and removed from the "Chrome URL" prefix list. |
+| 9 | Fixed | Permissions now `tabs, storage, sessions, scripting, webNavigation`. `bookmarks, history, notifications, favicon, search` removed. `_favicon/*` no longer web-accessible. |
+| 10 | Fixed | CSP added for extension pages: `script-src 'self'`, `connect-src 'self'`, `object-src 'none'`. |
+| 11 | Fixed | `openUrlInNewWindow` rewritten. Also fixed: global marks ignored the tab-load callback. |
+
+Checked with a headless Chrome end-to-end test (21 checks, incl. no outbound requests from the extension). Upstream unit/DOM tests updated but not run (needs Deno).
+
 ### 1. Pasting a `javascript:` URL runs it on the current site (Medium)
 
 - `content_scripts/mode_normal.js:201-205`: `p` reads the clipboard and sends it to `openUrlInCurrentTab`.
