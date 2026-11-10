@@ -11,6 +11,30 @@ function getBaseUrl(url) {
   return url.split("#")[0];
 }
 
+// Local marks are stored under a SHA-256 hash of the frame's URL, so storage never holds a
+// readable list of the pages you visited (URLs can carry tokens in their query string).
+async function getLocalMarkKey(url, markName) {
+  const bytes = new TextEncoder().encode(getBaseUrl(url));
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  const hex = Array.from(digest, (b) => b.toString(16).padStart(2, "0")).join("");
+  return `vimiumMark|${hex}|${markName}`;
+}
+
+const isValidMarkName = (name) => typeof name == "string" && name.length > 0 && name.length <= 2;
+
+// Save a local mark for the sending frame's URL. `mark` is the JSON string from content marks.js.
+export async function setLocal({ markName, mark }, sender) {
+  if (!isValidMarkName(markName) || typeof mark != "string" || mark.length > 1000) return;
+  await chrome.storage.local.set({ [await getLocalMarkKey(sender.url, markName)]: mark });
+}
+
+// Returns the sending frame's local mark, or null.
+export async function getLocal({ markName }, sender) {
+  if (!isValidMarkName(markName)) return null;
+  const key = await getLocalMarkKey(sender.url, markName);
+  return (await chrome.storage.local.get(key))[key] ?? null;
+}
+
 // Create a global mark. We record vimiumSecret with the mark so that we can tell later, when the
 // mark is used, whether this is the original Vimium session or a subsequent session. This affects
 // whether or not tabId can be considered valid.
@@ -31,6 +55,7 @@ export async function create(req, sender) {
     // The front-end frame hasn't provided the scroll position (because it's not the top frame
     // within its tab). We need to ask the top frame what its scroll position is.
     chrome.tabs.sendMessage(sender.tab.id, { handler: "getScrollPosition" }, (response) => {
+      if (response == null) return;
       saveMark(Object.assign(markInfo, { scrollX: response.scrollX, scrollY: response.scrollY }));
     });
   }
@@ -51,6 +76,7 @@ export async function goto(req) {
   const key = getLocationKey(req.markName);
   const items = await chrome.storage.local.get(key);
   const markInfo = items[key];
+  if (markInfo == null) return;
   if (markInfo.vimiumSecret !== vimiumSecret) {
     // This is a different Vimium instantiation, so markInfo.tabId is definitely out of date.
     Utils.debugLog("marks: vimiumSecret is incorrect.");

@@ -76,6 +76,13 @@ const enterNormalMode = function (count) {
   return mode;
 };
 
+// Sends an open-URL request to the background, and shows a message if the text wasn't a URL we
+// open (we only open web pages, and never search for plain text).
+async function openUrlOrSayWhyNot(request) {
+  const opened = await chrome.runtime.sendMessage(request);
+  if (!opened) HUD.show("Not a web URL; nothing opened.", 2000);
+}
+
 function findSelectedHelper(backwards) {
   const selection = globalThis.getSelection().toString();
   if (!selection) return;
@@ -160,6 +167,7 @@ const NormalModeCommands = {
 
   toggleViewSource() {
     chrome.runtime.sendMessage({ handler: "getCurrentTabUrl" }, function (url) {
+      if (url == null) return;
       if (url.substr(0, 12) === "view-source:") {
         url = url.substr(12, url.length - 12);
       } else {
@@ -184,7 +192,7 @@ const NormalModeCommands = {
 
   openCopiedUrlInNewTab(count, request) {
     HUD.pasteFromClipboard((url) =>
-      chrome.runtime.sendMessage({
+      openUrlOrSayWhyNot({
         handler: "openUrlInNewTab",
         position: request.registryEntry.options.position,
         url,
@@ -194,9 +202,7 @@ const NormalModeCommands = {
   },
 
   openCopiedUrlInCurrentTab() {
-    HUD.pasteFromClipboard((url) =>
-      chrome.runtime.sendMessage({ handler: "openUrlInCurrentTab", url })
-    );
+    HUD.pasteFromClipboard((url) => openUrlOrSayWhyNot({ handler: "openUrlInCurrentTab", url }));
   },
 
   // Mode changes.

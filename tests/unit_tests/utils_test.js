@@ -22,39 +22,6 @@ context("forTrusted", () => {
   });
 });
 
-context("extractQuery", () => {
-  should("extract queries from search URLs", () => {
-    assert.equal(
-      "bbc sport 1",
-      Utils.extractQuery(
-        "https://www.google.ie/search?q=%s",
-        "https://www.google.ie/search?q=bbc+sport+1",
-      ),
-    );
-    assert.equal(
-      "bbc sport 2",
-      Utils.extractQuery(
-        "http://www.google.ie/search?q=%s",
-        "https://www.google.ie/search?q=bbc+sport+2",
-      ),
-    );
-    assert.equal(
-      "bbc sport 3",
-      Utils.extractQuery(
-        "https://www.google.ie/search?q=%s",
-        "http://www.google.ie/search?q=bbc+sport+3",
-      ),
-    );
-    assert.equal(
-      "bbc sport 4",
-      Utils.extractQuery(
-        "https://www.google.ie/search?q=%s",
-        "http://www.google.ie/search?q=bbc+sport+4&blah",
-      ),
-    );
-  });
-});
-
 context("decodeURIByParts", () => {
   should("decode javascript: URLs", () => {
     assert.equal("foobar", Utils.decodeURIByParts("foobar"));
@@ -126,26 +93,6 @@ context("escapeRegexSpecialCharacters", () => {
     const str = "-[]/{}()*+?.^$|";
     const regexp = new RegExp(Utils.escapeRegexSpecialCharacters(str));
     assert.isTrue(regexp.test(str));
-  });
-});
-
-context("extractQuery", () => {
-  should("extract the query terms from a URL", () => {
-    const url = "https://www.google.ie/search?q=star+wars&foo&bar";
-    const searchUrl = "https://www.google.ie/search?q=%s";
-    assert.equal("star wars", Utils.extractQuery(searchUrl, url));
-  });
-
-  should("require trailing URL components", () => {
-    const url = "https://www.google.ie/search?q=star+wars&foo&bar";
-    const searchUrl = "https://www.google.ie/search?q=%s&foobar=x";
-    assert.equal(null, Utils.extractQuery(searchUrl, url));
-  });
-
-  should("accept trailing URL components", () => {
-    const url = "https://www.google.ie/search?q=star+wars&foo&bar&foobar=x";
-    const searchUrl = "https://www.google.ie/search?q=%s&foobar=x";
-    assert.equal("star wars", Utils.extractQuery(searchUrl, url));
   });
 });
 

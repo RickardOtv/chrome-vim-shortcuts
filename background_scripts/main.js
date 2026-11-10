@@ -24,10 +24,14 @@ chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_AND_UNTRUSTED_CONT
 globalThis.tabLoadedHandlers = {}; // tabId -> function()
 
 // A Vimium secret, available only within the current browser session. The secret is a generated
-// strong random string.
-const randomArray = globalThis.crypto.getRandomValues(new Uint8Array(32)); // 32-byte random token.
-const secretToken = randomArray.reduce((a, b) => a.toString(16) + b.toString(16));
-chrome.storage.session.set({ vimiumSecret: secretToken });
+// strong random string. The service worker restarts often; keep the existing secret if there is one,
+// so it really lasts the whole browser session (global marks rely on that).
+chrome.storage.session.get("vimiumSecret").then(({ vimiumSecret }) => {
+  if (vimiumSecret) return;
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(32));
+  const secretToken = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  chrome.storage.session.set({ vimiumSecret: secretToken });
+});
 
 // A query dictionary for `chrome.tabs.query` that will return only the visible tabs.
 const visibleTabsQueryArgs = { currentWindow: true };
@@ -84,7 +88,7 @@ function toggleMuteTab(request, sender) {
         tabs = tabs.filter((t) => t.id !== currentTab.id);
       }
       const audibleUnmutedTabs = tabs.filter((t) => t.audible && !t.mutedInfo.muted);
-      if (audibleUnmutedTabs.length >= 0) {
+      if (audibleUnmutedTabs.length > 0) {
         chrome.tabs.sendMessage(tabId, {
           frameId: sender.frameId,
           handler: "showMessage",
@@ -477,13 +481,25 @@ async function getFrameIdsForTab(tabId) {
   return frames.map((f) => f.frameId);
 }
 
+// The hint messages frames may broadcast to each other, and only during a hint session the
+// background started for that tab. Stops one frame from starting hints or clicking in another.
+const relayedHintMessages = [
+  "setOpenLinkMode",
+  "activateActiveHintMarker",
+  "rotateHints",
+  "updateKeyState",
+  "exit",
+];
+const tabsWithHintSession = new Set();
+
 const HintCoordinator = {
   // Forward the message in "request" to all frames the in sender's tab.
   broadcastLinkHintsMessage(request, sender) {
-    chrome.tabs.sendMessage(
-      sender.tab.id,
-      Object.assign(request, { handler: "linkHintsMessage" }),
-    );
+    const tabId = sender.tab.id;
+    if (!relayedHintMessages.includes(request.messageType)) return;
+    if (!tabsWithHintSession.has(tabId)) return;
+    if (request.messageType == "exit") tabsWithHintSession.delete(tabId);
+    chrome.tabs.sendMessage(tabId, Object.assign(request, { handler: "linkHintsMessage" }));
   },
 
   // This is sent by the content script once the user issues the link hints command.
@@ -492,6 +508,7 @@ const HintCoordinator = {
     originatingFrameId,
     { modeIndex, requestedByHelpDialog, isExtensionPage },
   ) {
+    tabsWithHintSession.add(tabId);
     const frameIds = await getFrameIdsForTab(tabId);
     // If link hints was triggered on a Vimium extension page (like the vimium help dialog or
     // options page), we cannot directly retrieve the frameIds for those pages using the
@@ -564,18 +581,42 @@ const HintCoordinator = {
   },
 };
 
+// Returns the user's configured registry entry matching `entry`, or null. Content scripts send the
+// registry entry for the key that was pressed; we only run what is actually mapped, with the mapped
+// options, and only background commands.
+function findConfiguredBackgroundEntry(entry) {
+  return Object.values(Commands.keyToRegistryEntry ?? {}).find((configured) =>
+    configured.background &&
+    Object.hasOwn(BackgroundCommands, configured.command) &&
+    configured.command == entry?.command &&
+    JSON.stringify(configured.options) == JSON.stringify(entry?.options)
+  ) ?? null;
+}
+
 const sendRequestHandlers = {
   runBackgroundCommand(request, sender) {
-    return BackgroundCommands[request.registryEntry.command](request, sender);
+    const registryEntry = findConfiguredBackgroundEntry(request.registryEntry);
+    if (registryEntry == null) return;
+    // URLs for createTab come only from the mapping or settings, never from the message.
+    delete request.url;
+    delete request.urls;
+    return BackgroundCommands[registryEntry.command](
+      Object.assign(request, { registryEntry }),
+      sender,
+    );
   },
   // getCurrentTabUrl is used by the content scripts to get their full URL, because window.location
-  // cannot help with Chrome-specific URLs like "view-source:http:..".
-  getCurrentTabUrl({ tab }) {
-    return tab.url;
+  // cannot help with Chrome-specific URLs like "view-source:http:..". Only the top frame may ask:
+  // an iframe shouldn't learn the URL of the page embedding it.
+  getCurrentTabUrl({ tab }, sender) {
+    return sender.frameId == 0 ? tab.url : null;
   },
-  openUrlInNewTab: createRepeatCommand(async (request) => {
-    await TabOperations.openUrlInNewTab(request);
-  }),
+  // Returns whether the URL was opened, so the content script can say when it wasn't.
+  async openUrlInNewTab(request) {
+    if (await TabOperations.toNavigableUrl(request.url) == null) return false;
+    await createRepeatCommand(TabOperations.openUrlInNewTab)(request);
+    return true;
+  },
   async openUrlInNewWindow(request) {
     await TabOperations.openUrlInNewWindow(request);
   },
@@ -602,12 +643,15 @@ const sendRequestHandlers = {
   },
 
   nextFrame: BackgroundCommands.nextFrame,
-  selectSpecificTab,
   createMark: marks.create,
   gotoMark: marks.goto,
+  setLocalMark: marks.setLocal,
+  getLocalMark: marks.getLocal,
   // Send a message to all frames in the current tab. If request.frameId is provided, then send
-  // messages to only the frame with that ID.
+  // messages to only the frame with that ID. Only the messages content scripts actually relay.
   sendMessageToFrames(request, sender) {
+    const relayed = ["runInTopFrame", "focusFrame", "userIsInteractingWithThePage"];
+    if (!relayed.includes(request.message?.handler)) return;
     const newRequest = Object.assign({}, request.message);
     const options = request.frameId != null ? { frameId: request.frameId } : {};
     chrome.tabs.sendMessage(sender.tab.id, newRequest, options);

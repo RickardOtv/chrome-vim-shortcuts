@@ -274,12 +274,9 @@ class FindMode extends Mode {
   // Returns null if no search has been performed yet.
   static getQuery(backwards) {
     if (!this.query) return;
-    // check if the query has been changed by a script in another frame
-    const mostRecentQuery = FindModeHistory.getQuery();
-    if (mostRecentQuery !== this.query.rawQuery) {
-      this.updateQuery(mostRecentQuery);
-    }
-
+    // Use only this frame's own last query. Upstream adopted the most recent query from the shared
+    // history here, which could be one typed on another site; matching it selects text that this
+    // page can observe, leaking what you searched for elsewhere.
     return this.getNextQueryFromRegexMatches(backwards);
   }
 

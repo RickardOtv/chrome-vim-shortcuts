@@ -15,13 +15,13 @@ context("TabOperations openurlInCurrentTab", () => {
     assert.equal(expected, url);
   });
 
-  should("open a non-URL as a search with the default search engine", async () => {
-    let url = null;
-    stub(chrome.tabs, "update", (_id, args) => {
-      url = args.url;
+  should("not open or search for text that isn't a URL", async () => {
+    let called = false;
+    stub(chrome.tabs, "update", () => {
+      called = true;
     });
-    await to.openUrlInCurrentTab({ url: "example query" });
-    assert.equal("https://www.google.com/search?q=example%20query", url);
+    assert.isFalse(await to.openUrlInCurrentTab({ url: "my secret password" }));
+    assert.isFalse(called);
   });
 
   should("not open javascript: or data: URLs", async () => {
@@ -58,17 +58,6 @@ context("TabOperations openUrlInNewTab", () => {
     });
     assert.equal(2, config.index);
     assert.equal(expected, tab.url);
-  });
-
-  should("open a non-URL as a search with the default search engine", async () => {
-    let config = null;
-    stub(chrome.tabs, "create", (_config) => {
-      config = _config;
-      return {};
-    });
-    await to.openUrlInNewTab({ tab: { index: 1 }, position: "after", url: "example query" });
-    assert.equal("https://www.google.com/search?q=example%20query", config.url);
-    assert.equal(2, config.index);
   });
 
   should("not open a data: URL", async () => {

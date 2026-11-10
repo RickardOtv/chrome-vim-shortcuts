@@ -12,7 +12,8 @@ const SearchResults = {
   sites: [
     {
       name: "Google",
-      host: /^(www\.)?google\.[a-z]+(\.[a-z]+)?$/,
+      // google.<tld> or google.co(m).<cc>, e.g. google.se, google.co.uk, google.com.au.
+      host: /^(www\.)?google\.([a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})$/,
       path: /^\/search/,
       results: "#search a:has(h3)",
     },

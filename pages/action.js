@@ -148,10 +148,8 @@ const ActionPage = {
       // The common use case is to disable Vimium at the domain level.
       // Generate "https?://www.example.com/*" from "http://www.example.com/path/to/page.html".
       // Note: IPV6 host addresses will contain "[" and "]" (which must be escaped).
-      const hostname = url.split("/", 3).slice(1).join("/").replace("[", "\\[").replace(
-        "]",
-        "\\]",
-      );
+      // Escape the dots (and IPv6 brackets), so www.example.com doesn't also match wwwXexample.com.
+      const hostname = url.split("/", 3).slice(1).join("/").replace(/[.[\]]/g, "\\$&");
       return "https?:/" + hostname + "/*";
     } else if (/^[a-z]{3,}:\/\/./.test(url)) {
       // Anything else which seems to be a URL.

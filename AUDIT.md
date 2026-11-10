@@ -32,7 +32,7 @@ There are, however, real risks for a work setting: one way a website can get Jav
 | # | Status | What changed |
 |---|---|---|
 | 1 | Fixed | `javascript:` execution removed. `TabOperations.toNavigableUrl` refuses `javascript:`, `data:` and `vbscript:` for every open-URL path (current tab, new tab, new window, incognito). |
-| 2 | Fixed | Omnibar, completers, search engines and suggestion code deleted. Non-URL text becomes a plain search URL (`searchUrl` setting, Google by default). |
+| 2 | Fixed | Omnibar, completers, search engines and suggestion code deleted. Non-URL text is no longer searched at all (see #22). |
 | 3 | Fixed | Vimium new-tab option removed; default is the browser's own new tab page. |
 | 4 | Fixed | Settings read and written only in `chrome.storage.local`. Old sync migrations removed. |
 | 5 | Partly fixed | Custom hint CSS and backup import kept (your choice). Import now drops any key that isn't a known setting. Only import your own backups. |
@@ -197,4 +197,10 @@ Full reviewer reports, with file and line references and the "verified safe" lis
 | 17 | Partly fixed | `command_listing.html` and `tlds.txt` removed from web-accessible resources. `use_dynamic_url` was tried, but it breaks HUD clipboard access (Chrome permissions policy), so the HUD and help pages still have fixed URLs and a site can still detect the extension. |
 | 18 | Fixed | "Yank link text" copies visible text (`innerText`) on one line. |
 
-The headless Chrome end-to-end test now has 37 checks, including attack attempts for #12–#14, #16 and #17. #19–#23 are still open.
+| 19 | Fixed | `n`/`N` use only this frame's own last query, not the shared history (which may hold a query typed on another site). Live highlighting while typing a search still sets the page selection, as in upstream. Also fixed: every new incognito tab reset the incognito history. |
+| 20 | Mostly fixed | `runBackgroundCommand` runs only a background command the user actually has mapped, with the mapped options, and ignores URLs in the message. The frame relay passes only `runInTopFrame`, `focusFrame` and `userIsInteractingWithThePage`. Hint messages are a fixed list, relayed only during a hint session the background started. Link text no longer includes typed input values or `innerHTML`. `getCurrentTabUrl` answers only the top frame (`toggleViewSource` now runs there). Not changed: content scripts can still read and write `chrome.storage.local` (settings are read there), so a compromised renderer could still change settings. Validation (#15) limits what bad values can do. |
+| 21 | Fixed | Local marks are saved by the background under a SHA-256 hash of the URL, so storage holds no readable URLs. URL fragments are kept only when they look like anchors. Global marks still store the full URL, because they need it to reopen the page. |
+| 22 | Fixed | `p`/`P` and visual-mode `p`/`P` open only real web URLs. Plain text opens nothing and shows "Not a web URL", so clipboard text is never sent to a search engine. The `searchUrl` setting is removed. The extension now makes no network requests of its own. |
+| 23 | Fixed | Deleted `escapeHtml`, `extractQuery`, `createSearchUrl` and `reload.html`/`reload.js`. Fixed: hint keystroke replay check, `passNextKeyKeys` storage area, `pathName` typo, GrabBackFocus listener (it never matched its message, so it leaked), `toggleMuteTab` never unmuting, duplicate settings listeners, secret regenerated on every service-worker restart, global-mark crashes, Google host match (`google.attacker.com`), SVG link URLs, image-map selector escaping, `removeElement` on removed nodes, unescaped dots in the default exclusion pattern. |
+
+The headless Chrome end-to-end test now has 40 checks, including attack attempts for #12–#14, #16 and #17, hashed mark keys, plain-text paste, global marks and mapped background commands.

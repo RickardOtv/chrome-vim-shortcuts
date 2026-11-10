@@ -14,17 +14,15 @@ const Marks = {
     }
   },
 
-  // The key used for storing a local mark in chrome.storage.local. Local marks are kept in the
-  // extension's storage, not the page's localStorage, so websites can't see them.
-  getLocationKey(keyChar) {
-    return `vimiumMark|${globalThis.location.href.split("#")[0]}|${keyChar}`;
-  },
-
+  // Local marks are saved by the background page (marks.js there), keyed by a hash of this frame's
+  // URL, in the extension's storage. Websites can't see them.
   getMarkString() {
+    // Keep the hash only if it looks like an anchor; hashes can also carry tokens.
+    const hash = globalThis.location.hash;
     return JSON.stringify({
       scrollX: globalThis.scrollX,
       scrollY: globalThis.scrollY,
-      hash: globalThis.location.hash,
+      hash: /^#[\w.:-]{0,100}$/.test(hash) ? hash : "",
     });
   },
 
@@ -78,8 +76,11 @@ const Marks = {
                 scrollY,
               }, () => this.showMessage("Created global mark", keyChar));
             } else {
-              chrome.storage.local.set({ [this.getLocationKey(keyChar)]: this.getMarkString() })
-                .then(() => this.showMessage("Created local mark", keyChar));
+              chrome.runtime.sendMessage({
+                handler: "setLocalMark",
+                markName: keyChar,
+                mark: this.getMarkString(),
+              }).then(() => this.showMessage("Created local mark", keyChar));
             }
           });
           return handlerStack.suppressEvent;
@@ -112,9 +113,8 @@ const Marks = {
                 }
               });
             } else {
-              const key = this.getLocationKey(keyChar);
               const markString = this.localRegisters[keyChar] ??
-                (await chrome.storage.local.get(key))[key];
+                (await chrome.runtime.sendMessage({ handler: "getLocalMark", markName: keyChar }));
               if (markString != null) {
                 this.setPreviousPosition();
                 const position = JSON.parse(markString);

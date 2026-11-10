@@ -197,9 +197,6 @@ async function buildStorePackage() {
     "make.js",
     "deno.json",
     "deno.lock",
-    // These reload scripts are used for development only and shouldn't appear in the build.
-    "reload.html",
-    "reload.js",
     "test_harnesses",
     "tests",
   ];

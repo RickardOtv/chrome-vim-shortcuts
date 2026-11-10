@@ -562,6 +562,7 @@ const allCommands = [
     group: "misc",
     advanced: true,
     noRepeat: true,
+    topFrame: true,
   },
 
   {

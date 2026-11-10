@@ -467,10 +467,10 @@ VisualMode.prototype.movements = {
     return this.yank();
   },
   "p"() {
-    return chrome.runtime.sendMessage({ handler: "openUrlInCurrentTab", url: this.yank() });
+    return openUrlOrSayWhyNot({ handler: "openUrlInCurrentTab", url: this.yank() });
   },
   "P"() {
-    return chrome.runtime.sendMessage({ handler: "openUrlInNewTab", url: this.yank() });
+    return openUrlOrSayWhyNot({ handler: "openUrlInNewTab", url: this.yank() });
   },
   "v"() {
     return new VisualMode().init();

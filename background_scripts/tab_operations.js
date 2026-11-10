@@ -5,21 +5,20 @@
 import * as bgUtils from "../background_scripts/bg_utils.js";
 import "../lib/url_utils.js";
 
-// Converts text (a URL, or search terms) into a URL we are willing to open, or null. Anything that
-// isn't a URL becomes a search with the default search engine. The result must pass
-// UrlUtils.isSafeToOpen, which also covers a bad searchUrl setting.
+// Converts text into a URL we are willing to open, or null. Text that isn't a URL is not opened
+// (not searched either): it may be something private left on the clipboard.
 export async function toNavigableUrl(text) {
   if (text == null || UrlUtils.isBlockedUrl(text)) return null;
-  const url = (await UrlUtils.convertToUrl(text)) ??
-    UrlUtils.createSearchUrl(text.trim(), Settings.get("searchUrl"));
+  const url = await UrlUtils.convertToUrl(text);
   return UrlUtils.isSafeToOpen(url) ? url : null;
 }
 
-// Opens request.url in the current tab.
+// Opens request.url in the current tab. Returns whether it was opened.
 export async function openUrlInCurrentTab(request) {
   const url = await toNavigableUrl(request.url);
-  if (url == null) return;
+  if (url == null) return false;
   await chrome.tabs.update(request.tabId, { url });
+  return true;
 }
 
 // Opens request.url in new tab and switches to it.

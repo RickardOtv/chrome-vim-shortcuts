@@ -32,15 +32,13 @@ context("settings", () => {
   should("drop invalid values from an imported backup", async () => {
     await Settings.setSettings({
       scrollStepSize: "lots",
-      searchUrl: "data:text/html,<h1>%s</h1>",
+      newTabCustomUrl: "data:text/html,<h1>hi</h1>",
       newTabDestination: '"]',
-      newTabCustomUrl: "file:///etc/passwd",
       exclusionRules: "not an array",
       filterLinkHints: true,
     });
     const defaults = Settings.defaultOptions;
     assert.equal(defaults.scrollStepSize, Settings.get("scrollStepSize"));
-    assert.equal(defaults.searchUrl, Settings.get("searchUrl"));
     assert.equal(defaults.newTabDestination, Settings.get("newTabDestination"));
     assert.equal(defaults.newTabCustomUrl, Settings.get("newTabCustomUrl"));
     assert.equal(defaults.exclusionRules, Settings.get("exclusionRules"));
@@ -53,9 +51,9 @@ context("settings", () => {
   });
 
   should("ignore invalid values already in storage", async () => {
-    await chrome.storage.local.set({ searchUrl: "javascript:alert(%s)" });
+    await chrome.storage.local.set({ newTabCustomUrl: "javascript:alert(1)" });
     await Settings.load();
-    assert.equal(Settings.defaultOptions.searchUrl, Settings.get("searchUrl"));
+    assert.equal(Settings.defaultOptions.newTabCustomUrl, Settings.get("newTabCustomUrl"));
   });
 
   should("default to the browser's new tab page", () => {

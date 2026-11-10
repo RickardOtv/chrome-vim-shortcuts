@@ -289,11 +289,16 @@ const Commands = {
   // A map of typed key => key it's mapped to (via the `mapkey` config statement).
   mapKeyRegistry: null,
 
+  // Safe to call more than once (the background calls it on load, install and startup); the
+  // settings listener is only added the first time.
   async init() {
     await Settings.onLoaded();
-    Settings.addEventListener("change", async () => {
-      await this.loadKeyMappings(Settings.get("keyMappings"));
-    });
+    if (!this.settingsListenerAdded) {
+      this.settingsListenerAdded = true;
+      Settings.addEventListener("change", async () => {
+        await this.loadKeyMappings(Settings.get("keyMappings"));
+      });
+    }
     await this.loadKeyMappings(Settings.get("keyMappings"));
   },
 

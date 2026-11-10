@@ -49,7 +49,6 @@ function isWindowFocusable() {
 class GrabBackFocus extends Mode {
   constructor() {
     super();
-    let listener;
     const exitEventHandler = () => {
       return this.alwaysContinueBubbling(() => {
         this.exit();
@@ -92,18 +91,14 @@ class GrabBackFocus extends Mode {
     // This mode is active in all frames. A user might have begun interacting with one frame without
     // other frames detecting this. When one GrabBackFocus mode exits, we broadcast a message to
     // inform all GrabBackFocus modes that they should exit; see #2296.
-    chrome.runtime.onMessage.addListener(
-      listener = ({ name }) => {
-        if (name === "userIsInteractingWithThePage") {
-          chrome.runtime.onMessage.removeListener(listener);
-          if (this.modeIsActive) {
-            this.exit();
-          }
-        }
-        // We will not be calling sendResponse.
-        return false;
-      },
-    );
+    if (!this.modeIsActive) return;
+    const listener = ({ handler }) => {
+      if (handler === "userIsInteractingWithThePage" && this.modeIsActive) this.exit();
+      // We will not be calling sendResponse.
+      return false;
+    };
+    chrome.runtime.onMessage.addListener(listener);
+    this.onExit(() => chrome.runtime.onMessage.removeListener(listener));
   }
 
   grabBackFocus(element) {
@@ -142,7 +137,7 @@ handlerStack.push({
         (target.tagName === "A") &&
         (target.origin === document.location.origin) &&
         // Clicking the link will change the url of this frame.
-        ((target.pathName !== document.location.pathName) ||
+        ((target.pathname !== document.location.pathname) ||
           (target.search !== document.location.search)) &&
         (["", "_self"].includes(target.target) ||
           ((target.target === "_parent") && (globalThis.parent === window)) ||
