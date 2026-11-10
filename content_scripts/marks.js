@@ -14,7 +14,8 @@ const Marks = {
     }
   },
 
-  // This returns the key which is used for storing mark locations in localStorage.
+  // The key used for storing a local mark in chrome.storage.local. Local marks are kept in the
+  // extension's storage, not the page's localStorage, so websites can't see them.
   getLocationKey(keyChar) {
     return `vimiumMark|${globalThis.location.href.split("#")[0]}|${keyChar}`;
   },
@@ -77,8 +78,8 @@ const Marks = {
                 scrollY,
               }, () => this.showMessage("Created global mark", keyChar));
             } else {
-              localStorage[this.getLocationKey(keyChar)] = this.getMarkString();
-              this.showMessage("Created local mark", keyChar);
+              chrome.storage.local.set({ [this.getLocationKey(keyChar)]: this.getMarkString() })
+                .then(() => this.showMessage("Created local mark", keyChar));
             }
           });
           return handlerStack.suppressEvent;
@@ -97,7 +98,7 @@ const Marks = {
       suppressAllKeyboardEvents: true,
       keydown: (event) => {
         if (KeyboardUtils.isPrintable(event)) {
-          this.exit(() => {
+          this.exit(async () => {
             const keyChar = KeyboardUtils.getKeyChar(event);
             if (this.isGlobalMark(event, keyChar)) {
               // This key must match @getLocationKey() in the back end.
@@ -111,9 +112,9 @@ const Marks = {
                 }
               });
             } else {
-              const markString = this.localRegisters[keyChar] != null
-                ? this.localRegisters[keyChar]
-                : localStorage[this.getLocationKey(keyChar)];
+              const key = this.getLocationKey(keyChar);
+              const markString = this.localRegisters[keyChar] ??
+                (await chrome.storage.local.get(key))[key];
               if (markString != null) {
                 this.setPreviousPosition();
                 const position = JSON.parse(markString);
